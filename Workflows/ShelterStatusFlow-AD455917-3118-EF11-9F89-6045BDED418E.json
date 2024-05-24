@@ -1,0 +1,217 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_office365": {
+        "runtimeSource": "invoker",
+        "connection": {
+          "connectionReferenceLogicalName": "crec7_sharedoffice365_ad9fd"
+        },
+        "api": {
+          "name": "shared_office365"
+        }
+      },
+      "shared_commondataserviceforapps": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "crec7_sharedcommondataserviceforapps_3082c"
+        },
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        }
+      },
+      "triggers": {
+        "manual": {
+          "metadata": {
+            "operationMetadataId": "87fefd7f-54c9-4060-9153-b4e1e4fe8ecd"
+          },
+          "type": "Request",
+          "kind": "PowerAppV2",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "description": "Please enter your input",
+                  "title": "ID",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                }
+              },
+              "required": [
+                "text"
+              ]
+            }
+          }
+        }
+      },
+      "actions": {
+        "Send_an_email_(V2)": {
+          "runAfter": {
+            "Get_Shelter_Data": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "a48dd1fb-5041-49ea-8fa1-5a508147b8ff"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_office365",
+              "operationId": "SendEmailV2",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
+            },
+            "parameters": {
+              "emailMessage/To": "thomas.gorman@beabhar.com",
+              "emailMessage/Subject": "Claimed for Foster: @{body('Get_Animal_Data')?['crec7_name']} - @{body('Get_Shelter_Data')?['crec7_sheltername']}",
+              "emailMessage/Body": "<p>Hi @{body('Get_Foster_Family_Data')?['crec7_claimername']}</p><br><p>You have claimed @{body('Get_Animal_Data')?['crec7_name']} for Fostering</p><br><p>Please arrange collection by @{addDays(utcNow(),7,'dd/MM/yyyy')}</p><br><p><u><b><strong>Animal Details</strong></b></u></p><p><b><strong>Name:</strong></b> @{body('Get_Animal_Data')?['crec7_name']}</p><p><b><strong>Type:</strong></b> @{variables('Type')}</p><p><b><strong>Age:</strong></b> @{body('Get_Animal_Data')?['crec7_age']}</p><p><b><strong>Sex:</strong></b> @{outputs('Compose')?[concat('crec7_sex','@OData.Community.Display.V1.FormattedValue')]}</p><p><b><strong>Medical Conditions:</strong></b> @{outputs('Compose')?[concat('crec7_medicalconditions','@OData.Community.Display.V1.FormattedValue')]}</p><p><b><strong>Medical Treatments:</strong></b> @{outputs('Compose')?[concat('crec7_medicaltreatments','@OData.Community.Display.V1.FormattedValue')]}</p><br><p>@{outputs('Compose_1')}</p><br><p>Regards</p><br><p>@{body('Get_Shelter_Data')?['crec7_manager']}</p><p>@{body('Get_Shelter_Data')?['crec7_sheltername']}</p>",
+              "emailMessage/Importance": "Normal"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        },
+        "Get_Animal_Data": {
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "2c5f7485-020a-4085-96e7-0a9946d13692"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_commondataserviceforapps",
+              "operationId": "GetItem",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+            },
+            "parameters": {
+              "entityName": "crec7_animals",
+              "recordId": "@triggerBody()?['text']"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        },
+        "Get_Foster_Family_Data": {
+          "runAfter": {
+            "Compose_1": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "1d0865e7-62af-4e21-a9e7-0a6cecdc804d"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_commondataserviceforapps",
+              "operationId": "GetItem",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+            },
+            "parameters": {
+              "entityName": "crec7_fosterfamilies",
+              "recordId": "@body('Get_Animal_Data')?['_crec7_fosterclaimer_value']"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        },
+        "Compose": {
+          "runAfter": {
+            "Get_Animal_Data": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "d10f850f-c057-4fbc-8cb7-25763718463e"
+          },
+          "type": "Compose",
+          "inputs": "@body('Get_Animal_Data')"
+        },
+        "Initialize_variable": {
+          "runAfter": {
+            "Compose": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "1791aea6-f692-495e-9ae0-d9a0c3320dd3"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "Type",
+                "type": "string",
+                "value": "@{outputs('Compose')?['crec7_type@OData.Community.Display.V1.FormattedValue']}"
+              }
+            ]
+          }
+        },
+        "Terminate": {
+          "runAfter": {
+            "Send_an_email_(V2)": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "267dec31-bc7f-482e-8f2b-6b57daf3c76b"
+          },
+          "type": "Terminate",
+          "inputs": {
+            "runStatus": "Succeeded"
+          }
+        },
+        "Get_Shelter_Data": {
+          "runAfter": {
+            "Get_Foster_Family_Data": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "f0229d3e-8881-4db6-a96f-7857b8842353"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_commondataserviceforapps",
+              "operationId": "GetItem",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps"
+            },
+            "parameters": {
+              "entityName": "crec7_shelters",
+              "recordId": "@body('Get_Animal_Data')?['_crec7_initialshelter_value']"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        },
+        "Compose_1": {
+          "runAfter": {
+            "Initialize_variable": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "c51bc0e2-c8ad-4dcd-ac66-ee5e44440bc5"
+          },
+          "type": "Compose",
+          "inputs": "<img src='@{body('Get_Animal_Data')?['crec7_photourl']}'></>"
+        }
+      },
+      "outputs": {}
+    },
+    "templateName": ""
+  },
+  "schemaVersion": "1.0.0.0"
+}

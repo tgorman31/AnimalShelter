@@ -1,0 +1,4 @@
+crec7_currentlocation: |-
+    =If(ThisRecord.crec7_shelterstatus= [@global_crec7_shelterstatus].'153300000',"Adopted",
+    Or(ThisRecord.crec7_shelterstatus= [@global_crec7_shelterstatus].'153300005',ThisRecord.crec7_shelterstatus= [@global_crec7_shelterstatus].'153300003'),crec7_InitialShelter.crec7_sheltername,
+    crec7_FosterClaimer.crec7_claimername)
